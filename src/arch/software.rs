@@ -2,6 +2,7 @@
 
 //! This module contains a software fallback for unsupported architectures.
 
+#[cfg(feature = "software-tables")]
 use crate::tables;
 use crate::CrcAlgorithm;
 use crate::CrcParams;
@@ -269,45 +270,52 @@ pub(crate) fn update(state: u64, data: &[u8], params: &CrcParams) -> u64 {
 // ============================================================================
 
 fn update_crc16(state: u16, data: &[u8], params: &CrcParams) -> u16 {
-    let (table, refin) = match params.algorithm {
-        CrcAlgorithm::Crc16Arc => (&tables::crc16::CRC16_ARC_TABLE, true),
-        CrcAlgorithm::Crc16Cdma2000 => (&tables::crc16::CRC16_CDMA2000_TABLE, false),
-        CrcAlgorithm::Crc16Cms => (&tables::crc16::CRC16_CMS_TABLE, false),
-        CrcAlgorithm::Crc16Dds110 => (&tables::crc16::CRC16_DDS_110_TABLE, false),
-        CrcAlgorithm::Crc16DectR => (&tables::crc16::CRC16_DECT_R_TABLE, false),
-        CrcAlgorithm::Crc16DectX => (&tables::crc16::CRC16_DECT_X_TABLE, false),
-        CrcAlgorithm::Crc16Dnp => (&tables::crc16::CRC16_DNP_TABLE, true),
-        CrcAlgorithm::Crc16En13757 => (&tables::crc16::CRC16_EN_13757_TABLE, false),
-        CrcAlgorithm::Crc16Genibus => (&tables::crc16::CRC16_GENIBUS_TABLE, false),
-        CrcAlgorithm::Crc16Gsm => (&tables::crc16::CRC16_GSM_TABLE, false),
-        CrcAlgorithm::Crc16Ibm3740 => (&tables::crc16::CRC16_IBM_3740_TABLE, false),
-        CrcAlgorithm::Crc16IbmSdlc => (&tables::crc16::CRC16_IBM_SDLC_TABLE, true),
-        CrcAlgorithm::Crc16IsoIec144433A => (&tables::crc16::CRC16_ISO_IEC_14443_3_A_TABLE, true),
-        CrcAlgorithm::Crc16Kermit => (&tables::crc16::CRC16_KERMIT_TABLE, true),
-        CrcAlgorithm::Crc16Lj1200 => (&tables::crc16::CRC16_LJ1200_TABLE, false),
-        CrcAlgorithm::Crc16M17 => (&tables::crc16::CRC16_M17_TABLE, false),
-        CrcAlgorithm::Crc16MaximDow => (&tables::crc16::CRC16_MAXIM_DOW_TABLE, true),
-        CrcAlgorithm::Crc16Mcrf4xx => (&tables::crc16::CRC16_MCRF4XX_TABLE, true),
-        CrcAlgorithm::Crc16Modbus => (&tables::crc16::CRC16_MODBUS_TABLE, true),
-        CrcAlgorithm::Crc16Nrsc5 => (&tables::crc16::CRC16_NRSC_5_TABLE, true),
-        CrcAlgorithm::Crc16OpensafetyA => (&tables::crc16::CRC16_OPENSAFETY_A_TABLE, false),
-        CrcAlgorithm::Crc16OpensafetyB => (&tables::crc16::CRC16_OPENSAFETY_B_TABLE, false),
-        CrcAlgorithm::Crc16Profibus => (&tables::crc16::CRC16_PROFIBUS_TABLE, false),
-        CrcAlgorithm::Crc16Riello => (&tables::crc16::CRC16_RIELLO_TABLE, true),
-        CrcAlgorithm::Crc16SpiFujitsu => (&tables::crc16::CRC16_SPI_FUJITSU_TABLE, false),
-        CrcAlgorithm::Crc16T10Dif => (&tables::crc16::CRC16_T10_DIF_TABLE, false),
-        CrcAlgorithm::Crc16Teledisk => (&tables::crc16::CRC16_TELEDISK_TABLE, false),
-        CrcAlgorithm::Crc16Tms37157 => (&tables::crc16::CRC16_TMS37157_TABLE, true),
-        CrcAlgorithm::Crc16Umts => (&tables::crc16::CRC16_UMTS_TABLE, false),
-        CrcAlgorithm::Crc16Usb => (&tables::crc16::CRC16_USB_TABLE, true),
-        CrcAlgorithm::Crc16Xmodem => (&tables::crc16::CRC16_XMODEM_TABLE, false),
-        CrcAlgorithm::CrcCustom => {
-            return update_crc16_custom(state, data, params);
-        }
-        _ => panic!("Invalid algorithm for u16 CRC"),
-    };
+    // Without the precomputed tables every algorithm takes the path of custom parameters:
+    // its table is generated on first use and cached.
+    #[cfg(not(feature = "software-tables"))]
+    return update_crc16_custom(state, data, params);
+    #[cfg(feature = "software-tables")]
+    {
+        let (table, refin) = match params.algorithm {
+            CrcAlgorithm::Crc16Arc => (&tables::crc16::CRC16_ARC_TABLE, true),
+            CrcAlgorithm::Crc16Cdma2000 => (&tables::crc16::CRC16_CDMA2000_TABLE, false),
+            CrcAlgorithm::Crc16Cms => (&tables::crc16::CRC16_CMS_TABLE, false),
+            CrcAlgorithm::Crc16Dds110 => (&tables::crc16::CRC16_DDS_110_TABLE, false),
+            CrcAlgorithm::Crc16DectR => (&tables::crc16::CRC16_DECT_R_TABLE, false),
+            CrcAlgorithm::Crc16DectX => (&tables::crc16::CRC16_DECT_X_TABLE, false),
+            CrcAlgorithm::Crc16Dnp => (&tables::crc16::CRC16_DNP_TABLE, true),
+            CrcAlgorithm::Crc16En13757 => (&tables::crc16::CRC16_EN_13757_TABLE, false),
+            CrcAlgorithm::Crc16Genibus => (&tables::crc16::CRC16_GENIBUS_TABLE, false),
+            CrcAlgorithm::Crc16Gsm => (&tables::crc16::CRC16_GSM_TABLE, false),
+            CrcAlgorithm::Crc16Ibm3740 => (&tables::crc16::CRC16_IBM_3740_TABLE, false),
+            CrcAlgorithm::Crc16IbmSdlc => (&tables::crc16::CRC16_IBM_SDLC_TABLE, true),
+            CrcAlgorithm::Crc16IsoIec144433A => (&tables::crc16::CRC16_ISO_IEC_14443_3_A_TABLE, true),
+            CrcAlgorithm::Crc16Kermit => (&tables::crc16::CRC16_KERMIT_TABLE, true),
+            CrcAlgorithm::Crc16Lj1200 => (&tables::crc16::CRC16_LJ1200_TABLE, false),
+            CrcAlgorithm::Crc16M17 => (&tables::crc16::CRC16_M17_TABLE, false),
+            CrcAlgorithm::Crc16MaximDow => (&tables::crc16::CRC16_MAXIM_DOW_TABLE, true),
+            CrcAlgorithm::Crc16Mcrf4xx => (&tables::crc16::CRC16_MCRF4XX_TABLE, true),
+            CrcAlgorithm::Crc16Modbus => (&tables::crc16::CRC16_MODBUS_TABLE, true),
+            CrcAlgorithm::Crc16Nrsc5 => (&tables::crc16::CRC16_NRSC_5_TABLE, true),
+            CrcAlgorithm::Crc16OpensafetyA => (&tables::crc16::CRC16_OPENSAFETY_A_TABLE, false),
+            CrcAlgorithm::Crc16OpensafetyB => (&tables::crc16::CRC16_OPENSAFETY_B_TABLE, false),
+            CrcAlgorithm::Crc16Profibus => (&tables::crc16::CRC16_PROFIBUS_TABLE, false),
+            CrcAlgorithm::Crc16Riello => (&tables::crc16::CRC16_RIELLO_TABLE, true),
+            CrcAlgorithm::Crc16SpiFujitsu => (&tables::crc16::CRC16_SPI_FUJITSU_TABLE, false),
+            CrcAlgorithm::Crc16T10Dif => (&tables::crc16::CRC16_T10_DIF_TABLE, false),
+            CrcAlgorithm::Crc16Teledisk => (&tables::crc16::CRC16_TELEDISK_TABLE, false),
+            CrcAlgorithm::Crc16Tms37157 => (&tables::crc16::CRC16_TMS37157_TABLE, true),
+            CrcAlgorithm::Crc16Umts => (&tables::crc16::CRC16_UMTS_TABLE, false),
+            CrcAlgorithm::Crc16Usb => (&tables::crc16::CRC16_USB_TABLE, true),
+            CrcAlgorithm::Crc16Xmodem => (&tables::crc16::CRC16_XMODEM_TABLE, false),
+            CrcAlgorithm::CrcCustom => {
+                return update_crc16_custom(state, data, params);
+            }
+            _ => panic!("Invalid algorithm for u16 CRC"),
+        };
 
-    native_update_u16(state, table, refin, data)
+        native_update_u16(state, table, refin, data)
+    }
 }
 
 #[cfg(feature = "alloc")]
@@ -370,27 +378,34 @@ fn update_crc16_custom(_state: u16, _data: &[u8], _params: &CrcParams) -> u16 {
 // ============================================================================
 
 fn update_crc32(state: u32, data: &[u8], params: &CrcParams) -> u32 {
-    let (table, refin) = match params.algorithm {
-        CrcAlgorithm::Crc32Aixm => (&tables::crc32::CRC32_AIXM_TABLE, false),
-        CrcAlgorithm::Crc32Autosar => (&tables::crc32::CRC32_AUTOSAR_TABLE, true),
-        CrcAlgorithm::Crc32Base91D => (&tables::crc32::CRC32_BASE91_D_TABLE, true),
-        CrcAlgorithm::Crc32Bzip2 => (&tables::crc32::CRC32_BZIP2_TABLE, false),
-        CrcAlgorithm::Crc32CdRomEdc => (&tables::crc32::CRC32_CD_ROM_EDC_TABLE, true),
-        CrcAlgorithm::Crc32Cksum => (&tables::crc32::CRC32_CKSUM_TABLE, false),
-        CrcAlgorithm::Crc32Iscsi => (&tables::crc32::CRC32_ISCSI_TABLE, true),
-        CrcAlgorithm::Crc32IsoHdlc => (&tables::crc32::CRC32_ISO_HDLC_TABLE, true),
-        CrcAlgorithm::Crc32Jamcrc => (&tables::crc32::CRC32_JAMCRC_TABLE, true),
-        CrcAlgorithm::Crc32Mef => (&tables::crc32::CRC32_MEF_TABLE, true),
-        CrcAlgorithm::Crc32Mpeg2 => (&tables::crc32::CRC32_MPEG_2_TABLE, false),
-        CrcAlgorithm::Crc32Xfer => (&tables::crc32::CRC32_XFER_TABLE, false),
-        #[allow(deprecated)]
-        CrcAlgorithm::Crc32Custom | CrcAlgorithm::CrcCustom => {
-            return update_crc32_custom(state, data, params);
-        }
-        _ => panic!("Invalid algorithm for u32 CRC"),
-    };
+    // Without the precomputed tables every algorithm takes the path of custom parameters:
+    // its table is generated on first use and cached.
+    #[cfg(not(feature = "software-tables"))]
+    return update_crc32_custom(state, data, params);
+    #[cfg(feature = "software-tables")]
+    {
+        let (table, refin) = match params.algorithm {
+            CrcAlgorithm::Crc32Aixm => (&tables::crc32::CRC32_AIXM_TABLE, false),
+            CrcAlgorithm::Crc32Autosar => (&tables::crc32::CRC32_AUTOSAR_TABLE, true),
+            CrcAlgorithm::Crc32Base91D => (&tables::crc32::CRC32_BASE91_D_TABLE, true),
+            CrcAlgorithm::Crc32Bzip2 => (&tables::crc32::CRC32_BZIP2_TABLE, false),
+            CrcAlgorithm::Crc32CdRomEdc => (&tables::crc32::CRC32_CD_ROM_EDC_TABLE, true),
+            CrcAlgorithm::Crc32Cksum => (&tables::crc32::CRC32_CKSUM_TABLE, false),
+            CrcAlgorithm::Crc32Iscsi => (&tables::crc32::CRC32_ISCSI_TABLE, true),
+            CrcAlgorithm::Crc32IsoHdlc => (&tables::crc32::CRC32_ISO_HDLC_TABLE, true),
+            CrcAlgorithm::Crc32Jamcrc => (&tables::crc32::CRC32_JAMCRC_TABLE, true),
+            CrcAlgorithm::Crc32Mef => (&tables::crc32::CRC32_MEF_TABLE, true),
+            CrcAlgorithm::Crc32Mpeg2 => (&tables::crc32::CRC32_MPEG_2_TABLE, false),
+            CrcAlgorithm::Crc32Xfer => (&tables::crc32::CRC32_XFER_TABLE, false),
+            #[allow(deprecated)]
+            CrcAlgorithm::Crc32Custom | CrcAlgorithm::CrcCustom => {
+                return update_crc32_custom(state, data, params);
+            }
+            _ => panic!("Invalid algorithm for u32 CRC"),
+        };
 
-    native_update_u32(state, table, refin, data)
+        native_update_u32(state, table, refin, data)
+    }
 }
 
 #[cfg(feature = "alloc")]
@@ -453,22 +468,29 @@ fn update_crc32_custom(_state: u32, _data: &[u8], _params: &CrcParams) -> u32 {
 // ============================================================================
 
 fn update_crc64(state: u64, data: &[u8], params: &CrcParams) -> u64 {
-    let (table, refin) = match params.algorithm {
-        CrcAlgorithm::Crc64Ecma182 => (&tables::crc64::CRC64_ECMA_182_TABLE, false),
-        CrcAlgorithm::Crc64GoIso => (&tables::crc64::CRC64_GO_ISO_TABLE, true),
-        CrcAlgorithm::Crc64Ms => (&tables::crc64::CRC64_MS_TABLE, true),
-        CrcAlgorithm::Crc64Nvme => (&tables::crc64::CRC64_NVME_TABLE, true),
-        CrcAlgorithm::Crc64Redis => (&tables::crc64::CRC64_REDIS_TABLE, true),
-        CrcAlgorithm::Crc64We => (&tables::crc64::CRC64_WE_TABLE, false),
-        CrcAlgorithm::Crc64Xz => (&tables::crc64::CRC64_XZ_TABLE, true),
-        #[allow(deprecated)]
-        CrcAlgorithm::Crc64Custom | CrcAlgorithm::CrcCustom => {
-            return update_crc64_custom(state, data, params);
-        }
-        _ => panic!("Invalid algorithm for u64 CRC"),
-    };
+    // Without the precomputed tables every algorithm takes the path of custom parameters:
+    // its table is generated on first use and cached.
+    #[cfg(not(feature = "software-tables"))]
+    return update_crc64_custom(state, data, params);
+    #[cfg(feature = "software-tables")]
+    {
+        let (table, refin) = match params.algorithm {
+            CrcAlgorithm::Crc64Ecma182 => (&tables::crc64::CRC64_ECMA_182_TABLE, false),
+            CrcAlgorithm::Crc64GoIso => (&tables::crc64::CRC64_GO_ISO_TABLE, true),
+            CrcAlgorithm::Crc64Ms => (&tables::crc64::CRC64_MS_TABLE, true),
+            CrcAlgorithm::Crc64Nvme => (&tables::crc64::CRC64_NVME_TABLE, true),
+            CrcAlgorithm::Crc64Redis => (&tables::crc64::CRC64_REDIS_TABLE, true),
+            CrcAlgorithm::Crc64We => (&tables::crc64::CRC64_WE_TABLE, false),
+            CrcAlgorithm::Crc64Xz => (&tables::crc64::CRC64_XZ_TABLE, true),
+            #[allow(deprecated)]
+            CrcAlgorithm::Crc64Custom | CrcAlgorithm::CrcCustom => {
+                return update_crc64_custom(state, data, params);
+            }
+            _ => panic!("Invalid algorithm for u64 CRC"),
+        };
 
-    native_update_u64(state, table, refin, data)
+        native_update_u64(state, table, refin, data)
+    }
 }
 
 #[cfg(feature = "alloc")]

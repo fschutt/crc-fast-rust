@@ -244,6 +244,7 @@ mod feature_detection;
 mod ffi;
 mod generate;
 mod structs;
+#[cfg(feature = "software-tables")]
 mod tables;
 mod test;
 mod traits;
